@@ -1,0 +1,9 @@
+{
+  "name": "Rapportino Intervento",
+  "short_name": "Rapportino",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f2f2f7",
+  "theme_color": "#f2f2f7",
+  "description": "Web app per rapportini di intervento"
+}

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#f2f2f7">
+  <title>Rapportino Intervento</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <button id="settingsBtn" class="text-btn settings-open">Impostazioni</button>
+
+    <section class="ios-section logo-section">
+      <div class="logo-placeholder" id="logoBox">
+        <img src="assets/logo_esx.png" alt="Logo ESX" class="real-logo">
+      </div>
+    </section>
+
+    <div class="section-title">Dati Cliente</div>
+    <section class="ios-section">
+      <div class="form-row">
+        <input id="clientName" type="text" placeholder="Nome cliente" autocomplete="organization">
+      </div>
+      <div class="separator"></div>
+      <div class="form-row split">
+        <span>Data</span>
+        <input id="date" type="date">
+      </div>
+    </section>
+
+    <div class="section-title">Tecnici coinvolti</div>
+    <section class="ios-section">
+      <div id="technicians"></div>
+      <div class="add-tech-row">
+        <input id="newTechnician" type="text" placeholder="Aggiungi tecnico">
+        <button id="addTechBtn" class="text-btn">Aggiungi</button>
+      </div>
+    </section>
+
+    <div class="section-title">Ore lavoro totali</div>
+    <section class="ios-section">
+      <div class="form-row">
+        <span id="totalHours" class="muted">0.00 ore</span>
+      </div>
+    </section>
+
+    <section class="plain-action">
+      <button id="detailsBtn" class="link-btn">Inserisci dettagli intervento</button>
+    </section>
+
+    <div class="section-title">Firma e Report</div>
+    <section class="ios-section actions-list">
+      <button id="signatureBtn" class="action-row">
+        <span id="signatureText">Aggiungi Firma Tecnico</span>
+        <span id="signatureStatus" class="status-icon orange">✎</span>
+      </button>
+      <div class="separator"></div>
+      <button id="saveDriveBtn" class="big-btn green">Salva</button>
+      <button id="generatePdfBtn" class="big-btn blue" disabled>Crea PDF</button>
+      <button id="saveShareBtn" class="big-btn blue" disabled>Condividi</button>
+      <button id="newReportBtn" class="big-btn orange-btn">Nuovo rapportino</button>
+    </section>
+
+
+    <div id="archiveModal" class="modal hidden">
+      <div class="modal-panel">
+        <div class="modal-nav">
+          <button class="text-btn close-archive">Chiudi</button>
+          <strong>Archivio Rapportini</strong>
+          <button id="refreshArchiveBtn" class="text-btn">Aggiorna</button>
+        </div>
+        <div class="modal-body">
+          <div id="archiveStatus" class="archive-status muted">Caricamento...</div>
+          <div id="archiveList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-note">
+      Web App • salvataggio locale + Google Drive
+    </div>
+  </main>
+
+  <!-- Technician template -->
+  <template id="techTemplate">
+    <div class="tech-card">
+      <div class="tech-summary">
+        <strong class="tech-name-label"></strong>
+        <span class="tech-hours muted">0.0 h</span>
+        <button class="text-btn toggle-times">Modifica orari</button>
+        <button class="trash-btn" aria-label="Elimina tecnico">🗑</button>
+      </div>
+
+      <label class="toggle-row">
+        <span>Pausa pranzo prevista</span>
+        <input class="has-break" type="checkbox" checked>
+      </label>
+
+      <div class="time-editor hidden">
+        <div class="time-line arrival-line">
+          <span>Arrivo</span>
+          <div class="wheel-group">
+            <select class="time-hour arrival-hour"></select><span>h</span>
+            <select class="time-minute arrival-minute"></select>
+          </div>
+        </div>
+
+        <div class="time-line pause-line">
+          <span>Pausa</span>
+          <div class="wheel-group">
+            <select class="time-hour pause-hour"></select><span>h</span>
+            <select class="time-minute pause-minute"></select>
+          </div>
+        </div>
+
+        <div class="time-line resume-line">
+          <span>Ripresa</span>
+          <div class="wheel-group">
+            <select class="time-hour resume-hour"></select><span>h</span>
+            <select class="time-minute resume-minute"></select>
+          </div>
+        </div>
+
+        <div class="time-line end-line">
+          <span>Fine</span>
+          <div class="wheel-group">
+            <select class="time-hour end-hour"></select><span>h</span>
+            <select class="time-minute end-minute"></select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <div id="settingsModal" class="modal hidden">
+    <div class="modal-panel">
+      <div class="modal-nav"><button id="closeSettingsBtn" class="text-btn">Chiudi</button><strong>Impostazioni</strong><button id="saveSettingsBtn" class="text-btn">Salva</button></div>
+      <div class="modal-body settings-body">
+        <div class="section-title">Logo app e PDF</div>
+        <section class="ios-section settings-card">
+          <img id="settingsLogoPreview" alt="Anteprima logo" class="real-logo">
+          <label>Carica un logo <input id="settingsLogoFile" type="file" accept="image/png,image/jpeg,image/webp"></label>
+          <button id="resetLogoBtn" class="text-btn">Ripristina logo originale</button>
+        </section>
+        <div class="section-title">Cartella Google Drive</div>
+        <section class="ios-section settings-card">
+          <label>Link della cartella <input id="settingsDriveFolder" type="text" placeholder="https://drive.google.com/drive/folders/…"></label>
+          <p class="muted small">I dati modificabili vengono salvati e letti in questa cartella. Il PDF viene generato per scaricarlo o condividerlo. Se lasci vuoto, l’app crea la cartella Rapportini.</p>
+          <p class="muted small">Stessa data e stesso locale aggiornano i dati del rapportino esistente. Le impostazioni sono memorizzate su questo browser.</p>
+        </section>
+        <div class="section-title">Collegamento Google</div>
+        <section class="ios-section settings-card">
+          <label>Client ID Google <input id="settingsGoogleClient" type="text" placeholder="…apps.googleusercontent.com"></label>
+          <p class="muted small">Per leggere i rapportini in una cartella già esistente, Google richiede il permesso di leggere e modificare i file di Drive. L’app opera nella cartella impostata. Non inserire password o Client Secret.</p>
+        </section>
+    <div class="section-title">Google Drive</div>
+    <section class="ios-section drive-section">
+      <div class="drive-status-row">
+        <div>
+          <strong id="driveStatusTitle">Non collegato</strong>
+          <div id="driveStatusText" class="muted small">Apri Impostazioni per configurare Google Drive.</div>
+        </div>
+        <button id="googleLoginBtn" class="big-btn blue drive-login-btn">Accedi con Google</button>
+      </div>
+
+      <div id="driveControls" class="hidden">
+        <button id="openArchiveBtn" class="big-btn blue">Archivio Google Drive</button>
+        <button id="googleLogoutBtn" class="big-btn orange-btn">Disconnetti Google</button>
+      </div>
+    </section>
+
+        <p id="settingsStatus" role="status"></p>
+      </div>
+    </div>
+  </div>
+  <!-- Details modal -->
+  <div id="detailsModal" class="modal hidden">
+    <div class="modal-panel">
+      <div class="modal-nav">
+        <button class="text-btn close-details">Chiudi</button>
+        <strong>Dettagli Intervento</strong>
+        <span></span>
+      </div>
+      <div class="modal-body">
+        <div class="section-title">Lavoro svolto</div>
+        <section class="ios-section"><textarea id="workDone" rows="7"></textarea></section>
+
+        <div class="section-title">Materiali utilizzati</div>
+        <section class="ios-section"><textarea id="materialsUsed" rows="7"></textarea></section>
+
+        <div class="section-title">Materiali riparati</div>
+        <section class="ios-section"><textarea id="materialsRepaired" rows="7"></textarea></section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Signature modal -->
+  <div id="signatureModal" class="modal hidden">
+    <div class="modal-panel">
+      <div class="modal-nav">
+        <button class="text-btn close-signature">Chiudi</button>
+        <strong>Firma del Tecnico</strong>
+        <span></span>
+      </div>
+      <div class="signature-body">
+        <p>Disegna la firma qui sotto:</p>
+        <canvas id="signatureCanvas" width="1000" height="500"></canvas>
+        <div class="signature-actions">
+          <button id="clearSignatureBtn" class="outline-btn">Cancella</button>
+          <button id="saveSignatureBtn" class="filled-btn" disabled>Salva Firma</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF preview -->
+  <div id="pdfModal" class="modal hidden">
+    <div class="modal-panel">
+      <div class="modal-nav">
+        <button class="text-btn close-pdf">Chiudi</button>
+        <strong>Anteprima PDF</strong>
+        <button id="downloadPdfTop" class="text-btn">Salva</button>
+      </div>
+      <div class="pdf-preview-wrap">
+        <iframe id="pdfPreview" title="Anteprima PDF"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
