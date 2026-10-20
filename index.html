@@ -14,7 +14,7 @@
 
     <section class="ios-section logo-section">
       <div class="logo-placeholder" id="logoBox">
-        <img src="assets/logo_esx.png" alt="Logo ESX" class="real-logo">
+        <img src="assets/default_logo.svg" alt="Rapportino di lavoro — logo personalizzabile" class="real-logo">
       </div>
     </section>
 
@@ -57,9 +57,13 @@
         <span id="signatureStatus" class="status-icon orange">✎</span>
       </button>
       <div class="separator"></div>
-      <button id="saveDriveBtn" class="big-btn green">Salva</button>
+      <button id="saveReportBtn" class="big-btn green">Salva</button>
       <button id="generatePdfBtn" class="big-btn blue" disabled>Crea PDF</button>
       <button id="saveShareBtn" class="big-btn blue" disabled>Condividi</button>
+      <button id="openMainArchiveBtn" class="big-btn blue">Archivio rapportini</button>
+      <div id="reportNotice" class="muted small" role="status"></div>
+      <button id="openLocalReportBtn" class="big-btn blue">Apri rapportino da File</button>
+      <input id="localReportFile" type="file" accept=".json,application/json" hidden>
       <button id="newReportBtn" class="big-btn orange-btn">Nuovo rapportino</button>
     </section>
 
@@ -72,14 +76,19 @@
           <button id="refreshArchiveBtn" class="text-btn">Aggiorna</button>
         </div>
         <div class="modal-body">
-          <div id="archiveStatus" class="archive-status muted">Caricamento...</div>
+          <section class="ios-section archive-filters">
+            <label>Nome locale <input id="archiveName" type="search" placeholder="Cerca un locale"></label>
+            <label>Data <input id="archiveDate" type="date"></label>
+            <button id="clearArchiveSearch" class="text-btn">Azzera ricerca</button>
+          </section>
+          <div id="archiveStatus" class="archive-status muted" role="status">Caricamento...</div>
           <div id="archiveList"></div>
         </div>
       </div>
     </div>
 
     <div class="footer-note">
-      Web App • salvataggio locale + Google Drive
+      Web App • archivio locale e ricerca offline
     </div>
   </main>
 
@@ -142,35 +151,10 @@
         <section class="ios-section settings-card">
           <img id="settingsLogoPreview" alt="Anteprima logo" class="real-logo">
           <label>Carica un logo <input id="settingsLogoFile" type="file" accept="image/png,image/jpeg,image/webp"></label>
-          <button id="resetLogoBtn" class="text-btn">Ripristina logo originale</button>
+          <button id="resetLogoBtn" class="text-btn">Rimuovi logo personale</button>
         </section>
-        <div class="section-title">Cartella Google Drive</div>
-        <section class="ios-section settings-card">
-          <label>Link della cartella <input id="settingsDriveFolder" type="text" placeholder="https://drive.google.com/drive/folders/…"></label>
-          <p class="muted small">I dati modificabili vengono salvati e letti in questa cartella. Il PDF viene generato per scaricarlo o condividerlo. Se lasci vuoto, l’app crea la cartella Rapportini.</p>
-          <p class="muted small">Stessa data e stesso locale aggiornano i dati del rapportino esistente. Le impostazioni sono memorizzate su questo browser.</p>
-        </section>
-        <div class="section-title">Collegamento Google</div>
-        <section class="ios-section settings-card">
-          <label>Client ID Google <input id="settingsGoogleClient" type="text" placeholder="…apps.googleusercontent.com"></label>
-          <p class="muted small">Per leggere i rapportini in una cartella già esistente, Google richiede il permesso di leggere e modificare i file di Drive. L’app opera nella cartella impostata. Non inserire password o Client Secret.</p>
-        </section>
-    <div class="section-title">Google Drive</div>
-    <section class="ios-section drive-section">
-      <div class="drive-status-row">
-        <div>
-          <strong id="driveStatusTitle">Non collegato</strong>
-          <div id="driveStatusText" class="muted small">Apri Impostazioni per configurare Google Drive.</div>
-        </div>
-        <button id="googleLoginBtn" class="big-btn blue drive-login-btn">Accedi con Google</button>
-      </div>
-
-      <div id="driveControls" class="hidden">
-        <button id="openArchiveBtn" class="big-btn blue">Archivio Google Drive</button>
-        <button id="googleLogoutBtn" class="big-btn orange-btn">Disconnetti Google</button>
-      </div>
-    </section>
-
+        <div class="section-title">Archivio locale</div>
+        <section class="ios-section settings-card"><p class="muted small">I rapportini restano su questo dispositivo e sono ricercabili anche offline. Esporta i dati in File per conservarne una copia: cancellando i dati del sito si elimina anche l’archivio locale.</p><button id="exportLocalReportBtn" class="big-btn blue">Esporta dati del rapportino</button></section>
         <p id="settingsStatus" role="status"></p>
       </div>
     </div>
@@ -229,9 +213,8 @@
     </div>
   </div>
 
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-  <script src="config.js"></script>
+  <script src="vendor/jspdf.umd.min.js"></script>
+  <script src="vendor/pdf-fonts.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
