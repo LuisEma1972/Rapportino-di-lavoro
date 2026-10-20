@@ -638,31 +638,40 @@ $("saveSettingsBtn").onclick=()=>{
   }catch(err){$("settingsStatus").textContent="Impostazioni non salvate: "+err.message;}
 };
 
-async function saveReportLocally(){
+function saveReportLocally(){ return saveReportToFile(); }
+
+async function saveReportToFile(){
   if(savingReport)return;
   if(!$("clientName").value.trim()){alert("Inserisci il nome del locale.");return;}
   const button=$("saveReportBtn");savingReport=true;button.disabled=true;button.textContent="Salvataggio…";
   try{
-    await archiveStore(currentReportData());
-    $("reportNotice").textContent="Rapportino salvato su questo dispositivo. Lo ritrovi in Archivio rapportini.";
-  }catch(err){alert("Salvataggio non riuscito: "+err.message);}
-  finally{savingReport=false;button.textContent="Salva";syncSaveButton();}
-}
-
-async function saveReportToFile(){
-  if(!$("clientName").value.trim()){alert("Inserisci il nome del locale.");return;}
-  try{
     const data=currentReportData();
-    await archiveStore(data);
-    $("reportNotice").textContent="Rapportino salvato nell’archivio locale. Scegli dove esportare la copia dei dati.";
     const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
     const file=new File([blob],jsonFilename(),{type:"application/json"});
+    // Aprire il pannello direttamente dal tocco, prima di attendere IndexedDB.
+    let exported;
     if(navigator.canShare?.({files:[file]})){
-      await navigator.share({files:[file],title:"Dati rapportino"});
+      exported=navigator.share({files:[file],title:"Dati rapportino"})
+        .then(()=>({ok:true}),error=>({error}));
+      $("reportNotice").textContent="Per salvare il file scegli Salva su File, poi una cartella in Su iPhone.";
     }else{
       const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=jsonFilename();document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+      exported=Promise.resolve({download:true});
+      $("reportNotice").textContent="Download del file dati avviato. Controlla la cartella Download del browser.";
     }
-  }catch(err){if(err.name!=="AbortError")alert("Salvataggio non riuscito: "+err.message);}
+    const archived=archiveStore(data).then(()=>({ok:true}),error=>({error}));
+    const result=await exported;
+    const local=await archived;
+    if(result.error){
+      if(result.error.name!=="AbortError")throw result.error;
+      $("reportNotice").textContent=local.ok?"Esportazione annullata. Il rapportino resta nell’archivio interno dell’app.":"Esportazione annullata. Il file non è stato salvato.";
+    }else if(local.error){
+      $("reportNotice").textContent="File esportato; copia nell’archivio interno non disponibile. Verifica il file nella cartella scelta.";
+    }else if(result.ok){
+      $("reportNotice").textContent="Pannello chiuso. Se hai scelto Salva su File, ritrovi il JSON nella cartella selezionata. Copia disponibile anche nell’archivio interno.";
+    }
+  }catch(err){alert("Salvataggio non riuscito: "+err.message);}
+  finally{savingReport=false;button.textContent="Salva";syncSaveButton();}
 }
 function validateLocalReport(d){
   if(!d||d.schemaVersion!==1||typeof d.clientName!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(d.date)||!Array.isArray(d.technicians))throw new Error("Il file non è un rapportino valido.");

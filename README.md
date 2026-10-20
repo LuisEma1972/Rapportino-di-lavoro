@@ -4,7 +4,7 @@
 Caricare il contenuto di questa cartella nella radice del repository GitHub Pages. Conservare le cartelle assets e vendor. Nessuna configurazione Google richiesta.
 
 ## Utilizzo
-- Salva registra dati e firma nell’archivio del browser/dispositivo, senza generare PDF o aprire il pannello di condivisione.
+- Salva esporta un JSON con dati e firma: su iPhone scegliere Salva su File e una cartella Su iPhone. In parallelo mantiene una copia nell’archivio interno per la ricerca. Se il browser non supporta la condivisione di file viene avviato un download. Il browser non può confermare la cartella effettivamente scelta né imporre la sostituzione di file omonimi: scegliere Sostituisci per aggiornare un JSON già salvato.
 - Stessa data e nome locale aggiornano il rapportino esistente; spazi e maiuscole vengono normalizzati.
 - Archivio rapportini mostra un elenco ordinato per data decrescente, filtrabile per parte del nome, data esatta o entrambi.
 - Apri recupera tutti i dati nella schermata principale per controllo o modifica. Le modifiche diventano definitive nell’archivio quando si preme Salva.
@@ -20,3 +20,5 @@ Aprire almeno una volta il sito HTTPS e lasciarlo caricare prima di usarlo offli
 
 ## Controlli
 Verificati sintassi JavaScript, salvataggio e aggiornamento dell’identificativo locale con storage simulato, ricerca nome/data/combinata e ripristino di campi, orari e firma. Da verificare sul dispositivo reale.
+
+La ricerca consulta l’archivio interno, non legge automaticamente tutte le cartelle dell’iPhone. I JSON conservati in File si recuperano con Apri rapportino da File e vengono aggiunti alla ricerca. Il pannello condivisione è aperto direttamente dal tocco per preservare l’attivazione richiesta da Safari.
