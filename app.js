@@ -26,7 +26,7 @@ function localArchiveDb(){
 }
 async function archiveStore(data){
   const db=await localArchiveDb();
-  const entry={...data,reportId:data.date+"_"+canonicalLocale(data.clientName)};
+  const entry={...data,reportId:data.reportId||data.date+"_"+canonicalLocale(data.clientName)};
   try{await new Promise((resolve,reject)=>{
     const tx=db.transaction("reports","readwrite");tx.objectStore("reports").put(entry);
     tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error("Salvataggio locale interrotto"));
@@ -570,7 +570,7 @@ function renderArchiveItem(file){
     <div class="archive-item-head">
       <div>
         <div class="archive-title">${escapeHtml(client)}</div>
-        <div class="archive-meta">${escapeHtml(date)}${created ? " • salvato "+escapeHtml(created) : ""}</div>
+        <div class="archive-meta">${escapeHtml(date)}${created ? " • salvato "+escapeHtml(created) : ""}${file.localData?.syncState==="synced"?" • Su Drive":" • Da sincronizzare"}</div>
       </div>
     </div>
     <div class="archive-actions">
@@ -631,14 +631,25 @@ $("settingsLogoFile").onchange=async e=>{
 };
 $("saveSettingsBtn").onclick=()=>{
   try{
-    const next={logo:pendingLogo};
+    const next={...appSettings,logo:pendingLogo};
     localStorage.setItem(SETTINGS_KEY,JSON.stringify(next));
     appSettings=next;pdfLogoImage=null;applyAppLogo();
     hideModal("settingsModal");
   }catch(err){$("settingsStatus").textContent="Impostazioni non salvate: "+err.message;}
 };
 
-function saveReportLocally(){ return saveReportToFile(); }
+async function saveReportLocally(){
+  if(savingReport)return;
+  if(!$("clientName").value.trim()){alert("Inserisci il nome del locale.");return;}
+  savingReport=true;syncSaveButton();
+  try{
+    const data={...currentReportData(),revision:crypto.randomUUID(),syncState:"pending"};
+    await archiveStore(data);
+    $("reportNotice").textContent="Salvato sul telefono. Da sincronizzare con Drive.";
+    persistDraft();await updateSyncStatus();void syncDrive();
+  }catch(err){alert("Salvataggio locale non riuscito: "+err.message);}
+  finally{savingReport=false;syncSaveButton();}
+}
 
 async function saveReportToFile(){
   if(savingReport)return;
@@ -690,9 +701,17 @@ $("localReportFile").onchange=async e=>{
   const file=e.target.files[0];if(!file)return;
   try{
     if(file.size>10*1024*1024)throw new Error("File troppo grande.");
-    const d=validateLocalReport(JSON.parse(await file.text()));
+    const parsed=JSON.parse(await file.text());
+    if(parsed.format==="rapportino-backup-v1"&&Array.isArray(parsed.reports)){
+      const reports=parsed.reports.map(validateLocalReport);
+      if(!confirm(`Importare ${reports.length} rapportini? Quelli con la stessa data e locale saranno sostituiti.`))return;
+      for(const report of reports)await archiveStore({...report,revision:crypto.randomUUID(),driveUploadId:undefined,syncState:"pending"});
+      $("reportNotice").textContent="Backup importato. Dati in attesa di sincronizzazione.";void updateSyncStatus();void syncDrive();return;
+    }
+    const d=validateLocalReport(parsed);
     if(!confirm("Aprire questo rapportino al posto di quello attualmente visualizzato?"))return;
-    await archiveStore(d);
+    await archiveStore({...d,revision:crypto.randomUUID(),driveUploadId:undefined,syncState:"pending"});
+    void updateSyncStatus();void syncDrive();
     showReportInMain(d);
   }catch(err){alert("Impossibile aprire il rapportino: "+err.message);}finally{e.target.value="";}
 };
