@@ -296,8 +296,18 @@ document.querySelector(".close-details").onclick=()=>hideModal("detailsModal");
 $("signatureBtn").onclick=()=>showModal("signatureModal");
 document.querySelector(".close-signature").onclick=()=>hideModal("signatureModal");
 
-$("newReportBtn").onclick=()=>{
-  if(confirm("Creare un nuovo rapportino e cancellare i dati correnti?")) resetAll();
+$("newReportBtn").onclick=async()=>{
+  if(savingReport)return;
+  if(!confirm("Confermi di aver salvato tutto sul telefono? Continuando elimini dall’app i dati del rapportino corrente e ne inizi uno nuovo."))return;
+  const button=$("newReportBtn");button.disabled=true;
+  try{
+    await removePhoneCopy(reportKey());
+    resetAll();generatedReportSnapshot=null;archiveFiles=[];archiveRequest++;
+    $("archiveList").innerHTML="";
+    ctx.clearRect(0,0,canvas.width,canvas.height);drawing=false;dirty=false;last=null;
+    $("reportNotice").textContent="Nuovo rapportino pronto. I dati del precedente sono stati eliminati dall’app.";
+  }catch(e){alert("Cancellazione non riuscita. I dati restano disponibili: "+e.message);}
+  finally{button.disabled=false;}
 };
 
 // Firma
@@ -570,7 +580,7 @@ function renderArchiveItem(file){
     <div class="archive-item-head">
       <div>
         <div class="archive-title">${escapeHtml(client)}</div>
-        <div class="archive-meta">${escapeHtml(date)}${created ? " • salvato "+escapeHtml(created) : ""}${file.localData?.syncState==="synced"?" • Su Drive":" • Da sincronizzare"}</div>
+        <div class="archive-meta">${escapeHtml(date)}${created ? " • salvato "+escapeHtml(created) : ""}${file.localData?.syncState==="synced"?" • Su Drive":" • Copia locale"}</div>
       </div>
     </div>
     <div class="archive-actions">
@@ -638,51 +648,31 @@ $("saveSettingsBtn").onclick=()=>{
   }catch(err){$("settingsStatus").textContent="Impostazioni non salvate: "+err.message;}
 };
 
-async function saveReportLocally(){
-  if(savingReport)return;
-  if(!$("clientName").value.trim()){alert("Inserisci il nome del locale.");return;}
-  savingReport=true;syncSaveButton();
-  try{
-    const data={...currentReportData(),revision:crypto.randomUUID(),syncState:"pending"};
-    await archiveStore(data);
-    $("reportNotice").textContent="Salvato sul telefono. Da sincronizzare con Drive.";
-    persistDraft();await updateSyncStatus();void syncDrive();
-  }catch(err){alert("Salvataggio locale non riuscito: "+err.message);}
-  finally{savingReport=false;syncSaveButton();}
+function saveReportLocally(){return saveReportToFile();}
+async function removePhoneCopy(id){
+  const db=await localArchiveDb();
+  try{await new Promise((resolve,reject)=>{
+    const tx=db.transaction("reports","readwrite");tx.objectStore("reports").delete(id);
+    tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
+  });}finally{db.close();}
 }
-
 async function saveReportToFile(){
   if(savingReport)return;
   if(!$("clientName").value.trim()){alert("Inserisci il nome del locale.");return;}
-  const button=$("saveReportBtn");savingReport=true;button.disabled=true;button.textContent="Salvataggio…";
+  const data=currentReportData();
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const file=new File([blob],jsonFilename(),{type:"application/json"});
+  savingReport=true;syncSaveButton();
   try{
-    const data=currentReportData();
-    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-    const file=new File([blob],jsonFilename(),{type:"application/json"});
-    // Aprire il pannello direttamente dal tocco, prima di attendere IndexedDB.
-    let exported;
     if(navigator.canShare?.({files:[file]})){
-      exported=navigator.share({files:[file],title:"Dati rapportino"})
-        .then(()=>({ok:true}),error=>({error}));
-      $("reportNotice").textContent="Per salvare il file scegli Salva su File, poi una cartella in Su iPhone.";
+      await navigator.share({files:[file],title:"Dati rapportino"});
     }else{
-      const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=jsonFilename();document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
-      exported=Promise.resolve({download:true});
-      $("reportNotice").textContent="Download del file dati avviato. Controlla la cartella Download del browser.";
+      const url=URL.createObjectURL(blob),a=document.createElement("a");
+      a.href=url;a.download=jsonFilename();a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
     }
-    const archived=archiveStore(data).then(()=>({ok:true}),error=>({error}));
-    const result=await exported;
-    const local=await archived;
-    if(result.error){
-      if(result.error.name!=="AbortError")throw result.error;
-      $("reportNotice").textContent=local.ok?"Esportazione annullata. Il rapportino resta nell’archivio interno dell’app.":"Esportazione annullata. Il file non è stato salvato.";
-    }else if(local.error){
-      $("reportNotice").textContent="File esportato; copia nell’archivio interno non disponibile. Verifica il file nella cartella scelta.";
-    }else if(result.ok){
-      $("reportNotice").textContent="Pannello chiuso. Se hai scelto Salva su File, ritrovi il JSON nella cartella selezionata. Copia disponibile anche nell’archivio interno.";
-    }
-  }catch(err){alert("Salvataggio non riuscito: "+err.message);}
-  finally{savingReport=false;button.textContent="Salva";syncSaveButton();}
+    $("reportNotice").textContent="Dopo aver verificato il file dati e salvato il PDF, premi Nuovo rapportino per eliminare i dati dall’app.";
+  }catch(e){if(e.name!=="AbortError")alert("Esportazione non riuscita: "+e.message);}
+  finally{savingReport=false;syncSaveButton();}
 }
 function validateLocalReport(d){
   if(!d||d.schemaVersion!==1||typeof d.clientName!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(d.date)||!Array.isArray(d.technicians))throw new Error("Il file non è un rapportino valido.");
@@ -706,12 +696,12 @@ $("localReportFile").onchange=async e=>{
       const reports=parsed.reports.map(validateLocalReport);
       if(!confirm(`Importare ${reports.length} rapportini? Quelli con la stessa data e locale saranno sostituiti.`))return;
       for(const report of reports)await archiveStore({...report,revision:crypto.randomUUID(),driveUploadId:undefined,syncState:"pending"});
-      $("reportNotice").textContent="Backup importato. Dati in attesa di sincronizzazione.";void updateSyncStatus();void syncDrive();return;
+      $("reportNotice").textContent="Backup importato nell’archivio locale.";return;
     }
     const d=validateLocalReport(parsed);
     if(!confirm("Aprire questo rapportino al posto di quello attualmente visualizzato?"))return;
-    await archiveStore({...d,revision:crypto.randomUUID(),driveUploadId:undefined,syncState:"pending"});
-    void updateSyncStatus();void syncDrive();
+    
+    
     showReportInMain(d);
   }catch(err){alert("Impossibile aprire il rapportino: "+err.message);}finally{e.target.value="";}
 };

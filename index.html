@@ -10,7 +10,6 @@
 </head>
 <body>
   <main class="app-shell">
-    <p id="syncSummary" class="muted small" role="status"></p>
     <button id="settingsBtn" class="text-btn settings-open">Impostazioni</button>
 
     <section class="ios-section logo-section">
@@ -154,17 +153,10 @@
           <label>Carica un logo <input id="settingsLogoFile" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <button id="resetLogoBtn" class="text-btn">Rimuovi logo personale</button>
         </section>
-        <div class="section-title">Archivio e Google Drive</div>
+        <div class="section-title">Salvataggio sul telefono</div>
         <section class="ios-section settings-card">
-          <p class="muted small">Salva conserva prima i dati sul telefono. Con Internet e Drive collegato, li sincronizza. I PDF si salvano separatamente con Condividi → Salva su File.</p>
-          <label>Client ID Google <input id="driveClientId" type="text" placeholder="…apps.googleusercontent.com" autocomplete="off"></label>
-          <button id="saveDriveConfig" class="text-btn">Salva configurazione Drive</button>
-          <button id="connectDrive" class="big-btn blue">Collega Google Drive</button>
-          <button id="syncDrive" class="text-btn">Sincronizza adesso</button>
-          <button id="disconnectDrive" class="text-btn">Scollega Drive</button>
-          <p id="driveStatus" role="status"></p>
-          <button id="exportBackup" class="text-btn">Esporta backup di tutti i dati</button>
-          <button id="exportLocalReportBtn" class="text-btn">Esporta dati del rapportino</button>
+          <p class="muted small">Salva esporta i dati in un file JSON: scegli Salva su File. Dopo aver verificato il file, premi Nuovo rapportino: confermando di aver salvato tutto elimini i dati correnti dall’app. Salva prima anche il PDF, se necessario. Per modificare un rapportino usa Apri rapportino da File.</p>
+          <button id="exportLocalReportBtn" class="big-btn blue">Salva dati su File</button>
         </section>
         <p id="settingsStatus" role="status"></p>
       </div>
@@ -227,6 +219,6 @@
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="vendor/pdf-fonts.js"></script>
   <script src="app.js"></script>
-  <script src="drive.js"></script>
+
 </body>
 </html>

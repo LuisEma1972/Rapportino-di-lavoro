@@ -1,5 +1,5 @@
-const CACHE="rapportino-swiftlike-v20-drive-offline";
-const ASSETS=["./","./index.html","./style.css","./app.js","./drive.js","./manifest.webmanifest","./assets/default_logo.svg","./vendor/jspdf.umd.min.js","./vendor/pdf-fonts.js"];
+const CACHE="rapportino-swiftlike-v22-new-report-cleanup";
+const ASSETS=["./","./index.html","./style.css","./app.js","./manifest.webmanifest","./assets/default_logo.svg","./vendor/jspdf.umd.min.js","./vendor/pdf-fonts.js"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith("rapportino-swiftlike-")&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener("fetch",e=>{
