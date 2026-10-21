@@ -1,1 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 210"><rect width="1000" height="210" fill="white"/><text x="500" y="100" text-anchor="middle" font-family="Arial, sans-serif" font-size="58" font-weight="700" fill="#374151">RAPPORTINO DI LAVORO</text><text x="500" y="155" text-anchor="middle" font-family="Arial, sans-serif" font-size="27" fill="#6b7280">Il tuo logo dalle Impostazioni</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100" width="400" height="100">
+  <rect width="400" height="100" fill="#ffffff"/>
+  <text x="200" y="55" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="28" fill="#007aff" text-anchor="middle">RAPPORTINO</text>
+  <text x="200" y="75" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" fill="#8e8e93" text-anchor="middle" letter-spacing="3">INTERVENTO TECNICO</text>
+</svg>

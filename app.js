@@ -16,6 +16,16 @@ const SETTINGS_KEY = "rapportino.settings";
 let appSettings = (()=>{try{return JSON.parse(localStorage.getItem(SETTINGS_KEY))||{};}catch{return {};}})();
 let archiveFiles = [];
 let archiveRequest = 0;
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function localArchiveDb(){
   return new Promise((resolve,reject)=>{
     const req=indexedDB.open("rapportino.archive",1);
@@ -24,6 +34,7 @@ function localArchiveDb(){
     req.onerror=()=>reject(new Error("Archivio locale non disponibile: "+req.error.message));
   });
 }
+
 async function archiveStore(data){
   const db=await localArchiveDb();
   const entry={...data,reportId:data.reportId||data.date+"_"+canonicalLocale(data.clientName)};
@@ -32,6 +43,7 @@ async function archiveStore(data){
     tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error("Salvataggio locale interrotto"));
   });}finally{db.close();}
 }
+
 async function readLocalArchive(){
   const db=await localArchiveDb();
   try{return await new Promise((resolve,reject)=>{
@@ -39,17 +51,20 @@ async function readLocalArchive(){
     req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
   });}finally{db.close();}
 }
+
 function matchingArchiveFiles(files,name,date){
   const query=canonicalLocale(name);
   return files.filter(f=>canonicalLocale(f.appProperties?.client||"").includes(query)&&(!date||f.appProperties?.reportDate===date))
     .sort((a,b)=>(b.appProperties?.reportDate||"").localeCompare(a.appProperties?.reportDate||"")||(a.appProperties?.client||"").localeCompare(b.appProperties?.client||"","it"));
 }
+
 function filterArchive(){
   $("archiveList").innerHTML="";
   const files=matchingArchiveFiles(archiveFiles,$("archiveName").value,$("archiveDate").value);
   $("archiveStatus").textContent=files.length?`${files.length} rapportini trovati`:"Nessun rapportino corrispondente.";
   files.forEach(renderArchiveItem);
 }
+
 async function refreshArchive(){
   const request=++archiveRequest;
   archiveFiles=[];$("archiveList").innerHTML="";$("archiveStatus").textContent="Caricamento archivio…";
@@ -59,6 +74,7 @@ async function refreshArchive(){
     filterArchive();
   }catch(err){if(request===archiveRequest)$("archiveStatus").textContent=err.message;}
 }
+
 function showReportInMain(d){
   validateLocalReport(d);
   $("clientName").value=d.clientName;$("date").value=d.date;technicians=d.technicians;
@@ -70,12 +86,15 @@ function showReportInMain(d){
   $("reportNotice").textContent="Rapportino recuperato: puoi controllarlo o modificarlo. Premi Salva per registrare le modifiche.";
   window.scrollTo({top:0,behavior:"smooth"});
 }
+
 let pendingLogo;
 let savingReport = false;
 let generatedReportSnapshot = null;
+
 function canonicalLocale(value){
   return String(value).normalize("NFKC").trim().replace(/\s+/g," ").toLocaleLowerCase("it-IT");
 }
+
 function reportKey(){return ($("date").value||todayISO())+"_"+canonicalLocale($("clientName").value);}
 function reportSnapshot(){return JSON.stringify({date:$("date").value,client:$("clientName").value,technicians,work:$("workDone").value,used:$("materialsUsed").value,repaired:$("materialsRepaired").value,signatureDataUrl,logo:appSettings.logo});}
 function applyAppLogo(){document.querySelector("#logoBox img").src=appSettings.logo||"assets/default_logo.svg";}
@@ -377,7 +396,7 @@ function incrementCounter(){
   localStorage.setItem("rapportino.counter", String(getCounter()+1));
 }
 function safeName(s){
-  return (s||"Rapportino").trim().replace(/\s+/g,"_").replace(/[\/\\:*?"<>|]/g,"-");
+  return (s||"Rapportino").trim().replace(/\s+/g,"_").replace(/[\/\:*?"<>|]/g,"-");
 }
 function filenameForReport(){
   const date=($("date").value||todayISO()).replaceAll("-","");
@@ -398,11 +417,9 @@ async function generatePdf(){
     doc.addFont(`Rapportino-${style}.ttf`,"Rapportino",style);
   }
 
-  // sfondo come nel PDF originale
   doc.setFillColor(255,255,255);
   doc.rect(0,0,W,H,"F");
 
-  // Logo personale oppure intestazione neutra.
   if(!appSettings.logo){
     doc.setTextColor(55,65,81);
     doc.setFont("Rapportino","bold");
@@ -419,7 +436,6 @@ async function generatePdf(){
     return;
   }
 
-  // intestazione destra
   doc.setTextColor(0,0,0);
   doc.setFont("Rapportino","bold");
   doc.setFontSize(14);
@@ -435,12 +451,10 @@ async function generatePdf(){
   doc.setFontSize(12);
   doc.text(`${dd}/${mm}/${yy}`, 426, 88);
 
-  // barra divisoria superiore
   doc.setDrawColor(224,224,224);
   doc.setLineWidth(6);
   doc.line(24, 117, 571, 117);
 
-  // titoli di sezione nello stile originale
   function title(txt, y){
     doc.setFont("Rapportino","bold");
     doc.setFontSize(16);
@@ -464,7 +478,6 @@ async function generatePdf(){
   title("Lavoro eseguito", 618);
   greyBox(24, 629, 548, 115);
 
-  // Colonne fisse: nome, primo turno, secondo turno e totale.
   let y = 208;
   technicians.forEach(t=>{
     doc.setTextColor(35,35,35);
@@ -476,7 +489,6 @@ async function generatePdf(){
     const firstEnd = t.hasBreak ? t.times.pause : t.times.end;
     doc.text(`${timeString(t.times.arrival)} - ${timeString(firstEnd)}`, 180, y);
     if(t.hasBreak){
-      // Freccia vettoriale: non dipende dai caratteri disponibili nel font PDF.
       doc.setDrawColor(90,90,90);
       doc.setLineWidth(0.8);
       doc.line(280, y-3.5, 296, y-3.5);
@@ -491,7 +503,6 @@ async function generatePdf(){
     y += 21;
   });
 
-  // testo delle aree
   doc.setTextColor(0,0,0);
   doc.setFont("Rapportino","normal");
   doc.setFontSize(11);
@@ -505,7 +516,6 @@ async function generatePdf(){
   const work = doc.splitTextToSize($("workDone").value || "", 520);
   doc.text(work, 33, 646);
 
-  // firma
   doc.setFont("Rapportino","normal");
   doc.setFontSize(12);
   doc.text("Firma del Tecnico", 350, 762);
@@ -524,6 +534,7 @@ async function generatePdf(){
   showModal("pdfModal");
   incrementCounter();
 }
+
 async function saveSharePdf(){
   if(!currentPdfBlob) return;
   if(generatedReportSnapshot!==reportSnapshot()){alert("Il rapportino è cambiato: genera di nuovo il PDF prima di condividerlo.");return;}
@@ -548,7 +559,6 @@ $("generatePdfBtn").onclick=generatePdf;
 $("saveShareBtn").onclick=saveSharePdf;
 $("downloadPdfTop").onclick=saveSharePdf;
 document.querySelector(".close-pdf").onclick=()=>hideModal("pdfModal");
-
 
 function currentReportData(){
   return {
@@ -590,13 +600,17 @@ function renderArchiveItem(file){
   `;
 
   item.querySelector(".archive-open").onclick = async () => {
-    if(!confirm("Aprire il rapportino selezionato al posto di quello attualmente visualizzato?"))return;
-    if(file.localData){showReportInMain(JSON.parse(JSON.stringify(file.localData)));return;}
-
+    if(!confirm("Aprire il rapportino selezionato al posto di quello attualmente visualizzato?")) return;
+    if(file.localData){
+      showReportInMain(JSON.parse(JSON.stringify(file.localData)));
+    }
   };
-  item.querySelector(".archive-duplicate").onclick = async () => {
-    if(file.localData){showReportInMain(JSON.parse(JSON.stringify(file.localData)));$("reportNotice").textContent="Per crearne una copia cambia data o nome del locale prima di salvare.";return;}
 
+  item.querySelector(".archive-duplicate").onclick = async () => {
+    if(file.localData){
+      showReportInMain(JSON.parse(JSON.stringify(file.localData)));
+      $("reportNotice").textContent = "Per crearne una copia cambia data o nome del locale prima di salvare.";
+    }
   };
 
   wrap.appendChild(item);
@@ -656,6 +670,7 @@ async function removePhoneCopy(id){
     tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
   });}finally{db.close();}
 }
+
 async function saveReportToFile(){
   if(savingReport)return;
   if(!$("clientName").value.trim()){alert("Inserisci il nome del locale.");return;}
@@ -674,6 +689,7 @@ async function saveReportToFile(){
   }catch(e){if(e.name!=="AbortError")alert("Esportazione non riuscita: "+e.message);}
   finally{savingReport=false;syncSaveButton();}
 }
+
 function validateLocalReport(d){
   if(!d||d.schemaVersion!==1||typeof d.clientName!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(d.date)||!Array.isArray(d.technicians))throw new Error("Il file non è un rapportino valido.");
   for(const t of d.technicians){
@@ -686,6 +702,7 @@ function validateLocalReport(d){
   if(d.signatureDataUrl&&!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(d.signatureDataUrl))throw new Error("Firma non valida.");
   return d;
 }
+
 $("openLocalReportBtn").onclick=()=>$("localReportFile").click();
 $("localReportFile").onchange=async e=>{
   const file=e.target.files[0];if(!file)return;
@@ -700,8 +717,6 @@ $("localReportFile").onchange=async e=>{
     }
     const d=validateLocalReport(parsed);
     if(!confirm("Aprire questo rapportino al posto di quello attualmente visualizzato?"))return;
-    
-    
     showReportInMain(d);
   }catch(err){alert("Impossibile aprire il rapportino: "+err.message);}finally{e.target.value="";}
 };
