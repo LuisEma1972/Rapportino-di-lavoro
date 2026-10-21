@@ -541,7 +541,7 @@ async function saveSharePdf(){
 
   if(navigator.canShare && navigator.canShare({files:[file]})){
     try{
-      await navigator.share({files:[file],title:"Rapportino PDF"});
+      await navigator.share({files:[file]});
       return;
     }catch(e){
       if(e.name==="AbortError") return;
@@ -589,7 +589,7 @@ function renderArchiveItem(file){
     <div class="archive-item-head">
       <div>
         <div class="archive-title">${escapeHtml(client)}</div>
-        <div class="archive-meta">${escapeHtml(date)}${created ? " • salvato "+escapeHtml(created) : ""}${file.localData?.syncState==="synced"?" • Su Drive":(file.localData?._fromFile?" • File selezionato":" • Copia locale precedente")}</div>
+        <div class="archive-meta">${escapeHtml(date)}${created ? " • salvato "+escapeHtml(created) : ""}${file.localData?._fromFile?" • File selezionato":" • Copia locale precedente"}</div>
       </div>
     </div>
     <div class="archive-actions">
@@ -674,7 +674,7 @@ async function saveReportToFile(){
   savingReport=true;syncSaveButton();
   try{
     if(navigator.canShare?.({files:[file]})){
-      await navigator.share({files:[file],title:"Dati rapportino"});
+      await navigator.share({files:[file]});
     }else{
       const url=URL.createObjectURL(blob),a=document.createElement("a");
       a.href=url;a.download=jsonFilename();a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
