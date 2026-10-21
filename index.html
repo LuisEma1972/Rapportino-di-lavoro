@@ -57,16 +57,37 @@
         <span id="signatureStatus" class="status-icon orange">✎</span>
       </button>
       <div class="separator"></div>
+      <button id="saveReportBtn" class="big-btn green">Salva</button>
       <button id="generatePdfBtn" class="big-btn blue" disabled>Crea PDF</button>
-      <button id="saveShareBtn" class="big-btn blue" disabled>Condividi PDF</button>
+      <button id="saveShareBtn" class="big-btn blue" disabled>Condividi</button>
+      <button id="openMainArchiveBtn" class="big-btn blue">Archivio rapportini</button>
       <div id="reportNotice" class="muted small" role="status"></div>
       <button id="openLocalReportBtn" class="big-btn blue">Apri rapportino da File</button>
       <input id="localReportFile" type="file" accept=".json,application/json" hidden>
       <button id="newReportBtn" class="big-btn orange-btn">Nuovo rapportino</button>
     </section>
 
+    <div id="archiveModal" class="modal hidden">
+      <div class="modal-panel">
+        <div class="modal-nav">
+          <button class="text-btn close-archive">Chiudi</button>
+          <strong>Archivio Rapportini</strong>
+          <button id="refreshArchiveBtn" class="text-btn">Aggiorna</button>
+        </div>
+        <div class="modal-body">
+          <section class="ios-section archive-filters">
+            <label>Nome locale <input id="archiveName" type="search" placeholder="Cerca un locale"></label>
+            <label>Data <input id="archiveDate" type="date"></label>
+            <button id="clearArchiveSearch" class="text-btn">Azzera ricerca</button>
+          </section>
+          <div id="archiveStatus" class="archive-status muted" role="status">Caricamento...</div>
+          <div id="archiveList"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="footer-note">
-      Web App • Rapportino Intervento
+      Web App • salvataggio su File e archivio interno
     </div>
   </main>
 
@@ -130,6 +151,11 @@
           <img id="settingsLogoPreview" alt="Anteprima logo" class="real-logo">
           <label>Carica un logo <input id="settingsLogoFile" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <button id="resetLogoBtn" class="text-btn">Rimuovi logo personale</button>
+        </section>
+        <div class="section-title">Salvataggio sul telefono</div>
+        <section class="ios-section settings-card">
+          <p class="muted small">Salva esporta i dati in un file JSON: scegli Salva su File. Dopo aver verificato il file, premi Nuovo rapportino: confermando di aver salvato tutto elimini i dati correnti dall’app. Salva prima anche il PDF, se necessario. Per modificare un rapportino usa Apri rapportino da File.</p>
+          <button id="exportLocalReportBtn" class="big-btn blue">Salva dati su File</button>
         </section>
         <p id="settingsStatus" role="status"></p>
       </div>
