@@ -25,3 +25,9 @@ Rimosso anche il riferimento residuo a Drive nell’elenco. L’app usa solo i f
 
 ## v25 — condivisione del solo file
 Rimosso il titolo aggiuntivo dalle condivisioni PDF e JSON per evitare allegati testuali aggiuntivi su iPhone. Verificare il risultato con Salva su File su iOS.
+
+## v26 — Crea PDF prima di Salva
+Crea PDF precede Salva. Il salvataggio JSON, anche dalle impostazioni, è abilitato solo dopo aver creato il PDF del rapportino corrente. Modificare dati, orari, firma o logo disabilita nuovamente Salva fino alla rigenerazione. Anche la condivisione del vecchio PDF viene disabilitata. Generare il PDF non equivale a salvarlo in File: usare Salva nell’anteprima per conservarlo.
+
+## v27 — Salva PDF e JSON insieme
+Dopo Crea PDF, Salva condivide entrambi i file in un’unica operazione senza titolo o testo aggiuntivo. Su iPhone scegliere Salva su File. Sui browser privi di condivisione dei due file vengono avviati due download: consentire download multipli se richiesto. Verificare entrambi prima di Nuovo rapportino. Annullare mantiene tutti i dati. La condivisione multipla resta da verificare sul dispositivo iOS.

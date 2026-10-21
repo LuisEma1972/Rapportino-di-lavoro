@@ -248,6 +248,7 @@ function persistDraft() {
     signatureDataUrl
   };
   localStorage.setItem("rapportino.draft", JSON.stringify(draft));
+  syncSaveButton();
 }
 
 function restoreDraft() {
@@ -611,7 +612,14 @@ function renderArchiveItem(file){
   wrap.appendChild(item);
 }
 
-function syncSaveButton(){ $("saveReportBtn").disabled=savingReport; }
+function hasCurrentPdf(){return !!currentPdfBlob && generatedReportSnapshot===reportSnapshot();}
+function syncSaveButton(){
+  const ready=hasCurrentPdf();
+  $("saveReportBtn").disabled=savingReport||!ready;
+  $("exportLocalReportBtn").disabled=savingReport||!ready;
+  $("saveShareBtn").disabled=!ready;
+  $("downloadPdfTop").disabled=!ready;
+}
 $("saveReportBtn").onclick=saveReportLocally;
 $("exportLocalReportBtn").onclick=saveReportToFile;
 $("refreshArchiveBtn").onclick=refreshArchive;
@@ -652,7 +660,7 @@ $("saveSettingsBtn").onclick=()=>{
   try{
     const next={...appSettings,logo:pendingLogo};
     localStorage.setItem(SETTINGS_KEY,JSON.stringify(next));
-    appSettings=next;pdfLogoImage=null;applyAppLogo();
+    appSettings=next;pdfLogoImage=null;applyAppLogo();syncSaveButton();
     hideModal("settingsModal");
   }catch(err){$("settingsStatus").textContent="Impostazioni non salvate: "+err.message;}
 };
@@ -667,19 +675,27 @@ async function removePhoneCopy(id){
 }
 async function saveReportToFile(){
   if(savingReport)return;
+  if(!hasCurrentPdf()){alert("Crea prima il PDF aggiornato del rapportino, poi premi Salva.");return;}
   if(!$("clientName").value.trim()){alert("Inserisci il nome del locale.");return;}
   const data=currentReportData();
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const file=new File([blob],jsonFilename(),{type:"application/json"});
+  const jsonBlob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const files=[
+    new File([currentPdfBlob],filenameForReport(),{type:"application/pdf"}),
+    new File([jsonBlob],jsonFilename(),{type:"application/json"})
+  ];
   savingReport=true;syncSaveButton();
   try{
-    if(navigator.canShare?.({files:[file]})){
-      await navigator.share({files:[file]});
+    if(navigator.canShare?.({files})){
+      await navigator.share({files});
+      $("reportNotice").textContent="PDF e JSON inviati alla condivisione. Verifica di averli salvati entrambi prima di premere Nuovo rapportino.";
     }else{
-      const url=URL.createObjectURL(blob),a=document.createElement("a");
-      a.href=url;a.download=jsonFilename();a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
+      for(const file of files){
+        const url=URL.createObjectURL(file),a=document.createElement("a");
+        a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),60000);
+      }
+      $("reportNotice").textContent="Avviato il download di PDF e JSON. Se richiesto, consenti i download multipli. Verifica entrambi i file prima di premere Nuovo rapportino.";
     }
-    $("reportNotice").textContent="Dopo aver verificato il file dati e salvato il PDF, premi Nuovo rapportino per eliminare i dati dall’app.";
   }catch(e){if(e.name!=="AbortError")alert("Esportazione non riuscita: "+e.message);}
   finally{savingReport=false;syncSaveButton();}
 }

@@ -57,8 +57,8 @@
         <span id="signatureStatus" class="status-icon orange">✎</span>
       </button>
       <div class="separator"></div>
-      <button id="saveReportBtn" class="big-btn green">Salva</button>
       <button id="generatePdfBtn" class="big-btn blue" disabled>Crea PDF</button>
+      <button id="saveReportBtn" class="big-btn green" disabled>Salva</button>
       <button id="saveShareBtn" class="big-btn blue" disabled>Condividi</button>
       <button id="openMainArchiveBtn" class="big-btn blue">Archivio rapportini</button>
       <div id="reportNotice" class="muted small" role="status"></div>
@@ -91,7 +91,7 @@
     </div>
 
     <div class="footer-note">
-      Web App • rapportini su File • v25
+      Web App • rapportini su File • v27
     </div>
   </main>
 
@@ -158,8 +158,8 @@
         </section>
         <div class="section-title">Salvataggio sul telefono</div>
         <section class="ios-section settings-card">
-          <p class="muted small">Salva esporta i dati in un file JSON: scegli Salva su File. Dopo aver verificato il file, premi Nuovo rapportino: confermando di aver salvato tutto elimini i dati correnti dall’app. Salva prima anche il PDF, se necessario. Per modificare un rapportino usa Apri rapportino da File.</p>
-          <button id="exportLocalReportBtn" class="big-btn blue">Salva dati su File</button>
+          <p class="muted small">Crea prima il PDF per abilitare Salva. Ogni modifica richiede di rigenerare il PDF. Salva include insieme PDF e JSON: scegli Salva su File. Dopo aver verificato entrambi i file, premi Nuovo rapportino: confermando di aver salvato tutto elimini i dati correnti dall’app. Per modificare un rapportino usa Apri rapportino da File.</p>
+          <button id="exportLocalReportBtn" class="big-btn blue" disabled>Salva PDF e JSON</button>
         </section>
         <p id="settingsStatus" role="status"></p>
       </div>
