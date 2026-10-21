@@ -1,12 +1,5 @@
 const $ = id => document.getElementById(id);
 
-const slots = {
-  arrival: { label: "Arrivo", hour: 8, minute: 0 },
-  pause:   { label: "Pausa", hour: 12, minute: 0 },
-  resume:  { label: "Ripresa", hour: 13, minute: 0 },
-  end:     { label: "Fine", hour: 17, minute: 0 }
-};
-
 let technicians = [];
 let signatureDataUrl = null;
 let currentPdfBlob = null;
@@ -14,66 +7,6 @@ let currentPdfUrl = null;
 
 const SETTINGS_KEY = "rapportino.settings";
 let appSettings = (()=>{try{return JSON.parse(localStorage.getItem(SETTINGS_KEY))||{};}catch{return {};}})();
-let archiveFiles = [];
-let archiveRequest = 0;
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function localArchiveDb(){
-  return new Promise((resolve,reject)=>{
-    const req=indexedDB.open("rapportino.archive",1);
-    req.onupgradeneeded=()=>{req.result.createObjectStore("reports",{keyPath:"reportId"});};
-    req.onsuccess=()=>resolve(req.result);
-    req.onerror=()=>reject(new Error("Archivio locale non disponibile: "+req.error.message));
-  });
-}
-
-async function archiveStore(data){
-  const db=await localArchiveDb();
-  const entry={...data,reportId:data.reportId||data.date+"_"+canonicalLocale(data.clientName)};
-  try{await new Promise((resolve,reject)=>{
-    const tx=db.transaction("reports","readwrite");tx.objectStore("reports").put(entry);
-    tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error("Salvataggio locale interrotto"));
-  });}finally{db.close();}
-}
-
-async function readLocalArchive(){
-  const db=await localArchiveDb();
-  try{return await new Promise((resolve,reject)=>{
-    const req=db.transaction("reports","readonly").objectStore("reports").getAll();
-    req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
-  });}finally{db.close();}
-}
-
-function matchingArchiveFiles(files,name,date){
-  const query=canonicalLocale(name);
-  return files.filter(f=>canonicalLocale(f.appProperties?.client||"").includes(query)&&(!date||f.appProperties?.reportDate===date))
-    .sort((a,b)=>(b.appProperties?.reportDate||"").localeCompare(a.appProperties?.reportDate||"")||(a.appProperties?.client||"").localeCompare(b.appProperties?.client||"","it"));
-}
-
-function filterArchive(){
-  $("archiveList").innerHTML="";
-  const files=matchingArchiveFiles(archiveFiles,$("archiveName").value,$("archiveDate").value);
-  $("archiveStatus").textContent=files.length?`${files.length} rapportini trovati`:"Nessun rapportino corrispondente.";
-  files.forEach(renderArchiveItem);
-}
-
-async function refreshArchive(){
-  const request=++archiveRequest;
-  archiveFiles=[];$("archiveList").innerHTML="";$("archiveStatus").textContent="Caricamento archivio…";
-  try{
-    const reports=await readLocalArchive();if(request!==archiveRequest)return;
-    archiveFiles=reports.map(d=>({id:d.reportId,localData:d,appProperties:{client:d.clientName,reportDate:d.date},createdTime:d.savedAt}));
-    filterArchive();
-  }catch(err){if(request===archiveRequest)$("archiveStatus").textContent=err.message;}
-}
 
 function showReportInMain(d){
   validateLocalReport(d);
@@ -81,21 +14,18 @@ function showReportInMain(d){
   for(const field of ["workDone","materialsUsed","materialsRepaired"])$(field).value=d[field]||"";
   signatureDataUrl=d.signatureDataUrl||null;currentPdfBlob=null;generatedReportSnapshot=null;
   if(currentPdfUrl)URL.revokeObjectURL(currentPdfUrl);currentPdfUrl=null;
-  updateSignatureUi();renderTechnicians();persistDraft();syncButtons();syncSaveButton();
-  hideModal("archiveModal");
-  $("reportNotice").textContent="Rapportino recuperato: puoi controllarlo o modificarlo. Premi Salva per registrare le modifiche.";
+  updateSignatureUi();renderTechnicians();persistDraft();syncButtons();
+  $("reportNotice").textContent="Rapportino caricato nel modulo.";
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
 let pendingLogo;
-let savingReport = false;
 let generatedReportSnapshot = null;
 
 function canonicalLocale(value){
   return String(value).normalize("NFKC").trim().replace(/\s+/g," ").toLocaleLowerCase("it-IT");
 }
 
-function reportKey(){return ($("date").value||todayISO())+"_"+canonicalLocale($("clientName").value);}
 function reportSnapshot(){return JSON.stringify({date:$("date").value,client:$("clientName").value,technicians,work:$("workDone").value,used:$("materialsUsed").value,repaired:$("materialsRepaired").value,signatureDataUrl,logo:appSettings.logo});}
 function applyAppLogo(){document.querySelector("#logoBox img").src=appSettings.logo||"assets/default_logo.svg";}
 let pdfLogoImage = null;
@@ -165,7 +95,6 @@ function syncButtons() {
   const valid = technicians.length > 0 && $("clientName").value.trim().length > 0;
   $("generatePdfBtn").disabled = !valid;
   $("saveShareBtn").disabled = !currentPdfBlob;
-  if(typeof syncSaveButton === "function") syncSaveButton();
 }
 
 function addTechnician(name) {
@@ -315,18 +244,12 @@ document.querySelector(".close-details").onclick=()=>hideModal("detailsModal");
 $("signatureBtn").onclick=()=>showModal("signatureModal");
 document.querySelector(".close-signature").onclick=()=>hideModal("signatureModal");
 
-$("newReportBtn").onclick=async()=>{
-  if(savingReport)return;
-  if(!confirm("Confermi di aver salvato tutto sul telefono? Continuando elimini dall’app i dati del rapportino corrente e ne inizi uno nuovo."))return;
-  const button=$("newReportBtn");button.disabled=true;
-  try{
-    await removePhoneCopy(reportKey());
-    resetAll();generatedReportSnapshot=null;archiveFiles=[];archiveRequest++;
-    $("archiveList").innerHTML="";
-    ctx.clearRect(0,0,canvas.width,canvas.height);drawing=false;dirty=false;last=null;
-    $("reportNotice").textContent="Nuovo rapportino pronto. I dati del precedente sono stati eliminati dall’app.";
-  }catch(e){alert("Cancellazione non riuscita. I dati restano disponibili: "+e.message);}
-  finally{button.disabled=false;}
+$("newReportBtn").onclick=()=>{
+  if(!confirm("Vuoi iniziare un nuovo rapportino? Tutti i dati nel modulo verranno cancellati.")) return;
+  resetAll();
+  generatedReportSnapshot=null;
+  ctx.clearRect(0,0,canvas.width,canvas.height);drawing=false;dirty=false;last=null;
+  $("reportNotice").textContent="Nuovo rapportino pronto.";
 };
 
 // Firma
@@ -530,7 +453,6 @@ async function generatePdf(){
   currentPdfUrl = URL.createObjectURL(currentPdfBlob);
   $("pdfPreview").src = currentPdfUrl;
   $("saveShareBtn").disabled = false;
-  if(typeof syncSaveButton === "function") syncSaveButton();
   showModal("pdfModal");
   incrementCounter();
 }
@@ -559,68 +481,6 @@ $("generatePdfBtn").onclick=generatePdf;
 $("saveShareBtn").onclick=saveSharePdf;
 $("downloadPdfTop").onclick=saveSharePdf;
 document.querySelector(".close-pdf").onclick=()=>hideModal("pdfModal");
-
-function currentReportData(){
-  return {
-    schemaVersion: 1,
-    reportId: reportKey(),
-    clientName: $("clientName").value.trim(),
-    date: $("date").value,
-    technicians: technicians.map(t => JSON.parse(JSON.stringify(t))),
-    workDone: $("workDone").value,
-    materialsUsed: $("materialsUsed").value,
-    materialsRepaired: $("materialsRepaired").value,
-    signatureDataUrl,
-    savedAt: new Date().toISOString()
-  };
-}
-
-function jsonFilename(){return filenameForReport().replace(/\.pdf$/, ".json");}
-
-function renderArchiveItem(file){
-  const wrap = $("archiveList");
-  const item = document.createElement("div");
-  item.className = "archive-item";
-
-  const client = file.appProperties?.client || "Senza cliente";
-  const date = file.appProperties?.reportDate || "";
-  const created = file.createdTime ? new Date(file.createdTime).toLocaleString("it-IT") : "";
-
-  item.innerHTML = `
-    <div class="archive-item-head">
-      <div>
-        <div class="archive-title">${escapeHtml(client)}</div>
-        <div class="archive-meta">${escapeHtml(date)}${created ? " • salvato "+escapeHtml(created) : ""}${file.localData?.syncState==="synced"?" • Su Drive":" • Copia locale"}</div>
-      </div>
-    </div>
-    <div class="archive-actions">
-      <button class="archive-open">Apri</button>
-      <button class="archive-duplicate">Duplica</button>
-    </div>
-  `;
-
-  item.querySelector(".archive-open").onclick = async () => {
-    if(!confirm("Aprire il rapportino selezionato al posto di quello attualmente visualizzato?")) return;
-    if(file.localData){
-      showReportInMain(JSON.parse(JSON.stringify(file.localData)));
-    }
-  };
-
-  item.querySelector(".archive-duplicate").onclick = async () => {
-    if(file.localData){
-      showReportInMain(JSON.parse(JSON.stringify(file.localData)));
-      $("reportNotice").textContent = "Per crearne una copia cambia data o nome del locale prima di salvare.";
-    }
-  };
-
-  wrap.appendChild(item);
-}
-
-function syncSaveButton(){ $("saveReportBtn").disabled=savingReport; }
-$("saveReportBtn").onclick=saveReportLocally;
-$("exportLocalReportBtn").onclick=saveReportToFile;
-$("refreshArchiveBtn").onclick=refreshArchive;
-document.querySelector(".close-archive").onclick=()=>hideModal("archiveModal");
 
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("./sw.js").catch(()=>{});
@@ -662,34 +522,6 @@ $("saveSettingsBtn").onclick=()=>{
   }catch(err){$("settingsStatus").textContent="Impostazioni non salvate: "+err.message;}
 };
 
-function saveReportLocally(){return saveReportToFile();}
-async function removePhoneCopy(id){
-  const db=await localArchiveDb();
-  try{await new Promise((resolve,reject)=>{
-    const tx=db.transaction("reports","readwrite");tx.objectStore("reports").delete(id);
-    tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
-  });}finally{db.close();}
-}
-
-async function saveReportToFile(){
-  if(savingReport)return;
-  if(!$("clientName").value.trim()){alert("Inserisci il nome del locale.");return;}
-  const data=currentReportData();
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const file=new File([blob],jsonFilename(),{type:"application/json"});
-  savingReport=true;syncSaveButton();
-  try{
-    if(navigator.canShare?.({files:[file]})){
-      await navigator.share({files:[file],title:"Dati rapportino"});
-    }else{
-      const url=URL.createObjectURL(blob),a=document.createElement("a");
-      a.href=url;a.download=jsonFilename();a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
-    }
-    $("reportNotice").textContent="Dopo aver verificato il file dati e salvato il PDF, premi Nuovo rapportino per eliminare i dati dall’app.";
-  }catch(e){if(e.name!=="AbortError")alert("Esportazione non riuscita: "+e.message);}
-  finally{savingReport=false;syncSaveButton();}
-}
-
 function validateLocalReport(d){
   if(!d||d.schemaVersion!==1||typeof d.clientName!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(d.date)||!Array.isArray(d.technicians))throw new Error("Il file non è un rapportino valido.");
   for(const t of d.technicians){
@@ -709,21 +541,8 @@ $("localReportFile").onchange=async e=>{
   try{
     if(file.size>10*1024*1024)throw new Error("File troppo grande.");
     const parsed=JSON.parse(await file.text());
-    if(parsed.format==="rapportino-backup-v1"&&Array.isArray(parsed.reports)){
-      const reports=parsed.reports.map(validateLocalReport);
-      if(!confirm(`Importare ${reports.length} rapportini? Quelli con la stessa data e locale saranno sostituiti.`))return;
-      for(const report of reports)await archiveStore({...report,revision:crypto.randomUUID(),driveUploadId:undefined,syncState:"pending"});
-      $("reportNotice").textContent="Backup importato nell’archivio locale.";return;
-    }
     const d=validateLocalReport(parsed);
     if(!confirm("Aprire questo rapportino al posto di quello attualmente visualizzato?"))return;
     showReportInMain(d);
   }catch(err){alert("Impossibile aprire il rapportino: "+err.message);}finally{e.target.value="";}
 };
-
-$("openMainArchiveBtn").onclick=()=>{
-  showModal("archiveModal");refreshArchive();
-};
-$("archiveName").oninput=filterArchive;
-$("archiveDate").onchange=filterArchive;
-$("clearArchiveSearch").onclick=()=>{$("archiveName").value="";$("archiveDate").value="";filterArchive();};

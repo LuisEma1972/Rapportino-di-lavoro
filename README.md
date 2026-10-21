@@ -1,8 +1,9 @@
-# Rapportino — salvataggio in File e cancellazione dall’app
+# Rapportino Intervento
 
-Caricare tutti i file di questa cartella nel sito esistente. Il precedente drive.js non è più usato e può essere rimosso dal repository. La versione aggiornata non effettua sincronizzazioni Drive. Chiudere tutte le finestre dell’app e riaprire online per installare l’aggiornamento. Non cancellare i dati del sito per aggiornare.
+Versione aggiornata con rimozione dei pulsanti di salvataggio/archivio interno.
 
-1. Compilare il rapportino. Se serve, creare il PDF e usare Condividi → Salva su File prima di svuotare il modulo.
-2. Premere Salva: esporta il file dati JSON. Su iPhone scegliere Salva su File e una cartella Sul mio iPhone.
-3. Verificare che il JSON sia presente e premere Nuovo rapportino. Confermare di aver salvato tutto sul telefono: l’app elimina il rapportino corrispondente dal proprio archivio, elimina la bozza e la firma e svuota modulo e anteprima PDF.
-4. Per riaprirlo usare Apri rapportino da File. Il singolo JSON viene caricato nel modulo senza aggiungere una nuova copia all’archivio. Finché si lavora il modulo mantiene una bozza locale, eliminata con la conferma del salvataggio.
+## Nota importante per l'aggiornamento sul telefono:
+Se l'app è già stata installata o aperta sul telefono, il Service Worker potrebbe mostrare la vecchia versione in cache.
+Per aggiornare correttamente:
+1. Sostituire tutti i file sul server Web / hosting.
+2. Sul telefono/browser, ricaricare la pagina oppure chiudere la scheda/PWA e riaprirla per consentire il caricamento della nuova versione `v30`.
